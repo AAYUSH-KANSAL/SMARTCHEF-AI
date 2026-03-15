@@ -1,91 +1,104 @@
 import io
 import re
-from fpdf import FPDF
 
-class RecipePDF(FPDF):
-    def header(self):
-        self.set_font('helvetica', 'B', 20)
-        self.set_text_color(220, 20, 60) # Crimson red
-        self.cell(0, 15, 'SmartChef AI Recipe', border=0, align='C', ln=1)
-        self.set_draw_color(200, 200, 200)
-        self.line(10, 25, 200, 25)
-        self.ln(10)
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('helvetica', 'I', 8)
-        self.set_text_color(128, 128, 128)
-        self.cell(0, 10, f'Page {self.page_no()}', align='C')
+
+def _clean_text(text: str) -> str:
+    text = str(text)
+    text = text.replace("**", "")
+    text = text.replace("\u2022", "-")
+    text = text.replace("\u2013", "-")
+    text = text.replace("\u2014", "-")
+    # Split very long unbroken chunks to avoid layout issues on cloud environments.
+    text = re.sub(
+        r"\S{70,}",
+        lambda m: " ".join(m.group(0)[i:i + 35] for i in range(0, len(m.group(0)), 35)),
+        text,
+    )
+    text = re.sub(r"[^\x09\x0A\x0D\x20-\x7E\u00A0-\u024F]", "", text)
+    return text.strip()
+
 
 def create_recipe_pdf(recipe_text, recipe_name):
     """
-    Parses recipe markdown text and generates a highly formatted clean PDF buffer.
+    Parse recipe markdown text and generate a clean PDF buffer.
+    Returns:
+        io.BytesIO
     """
-    pdf = RecipePDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    
-    # Strip markdown bolding and asterisks to make parsing cleaner
-    clean_text = recipe_text.replace('**', '')
-    
-    lines = clean_text.split('\n')
-    
-    for line in lines:
-        line = line.strip()
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=15 * mm,
+        rightMargin=15 * mm,
+        topMargin=15 * mm,
+        bottomMargin=15 * mm,
+        title=f"{_clean_text(recipe_name)} Recipe",
+        author="SmartChef AI",
+    )
+
+    base = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "RecipeTitle",
+        parent=base["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=22,
+        leading=26,
+        alignment=1,
+        textColor=colors.HexColor("#B22222"),
+        spaceAfter=8,
+    )
+    heading_style = ParagraphStyle(
+        "Heading",
+        parent=base["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=13,
+        leading=16,
+        textColor=colors.HexColor("#333333"),
+        spaceBefore=8,
+        spaceAfter=4,
+    )
+    body_style = ParagraphStyle(
+        "Body",
+        parent=base["Normal"],
+        fontName="Helvetica",
+        fontSize=11,
+        leading=15,
+        textColor=colors.black,
+    )
+
+    story = []
+    display_name = _clean_text(recipe_name) or "SmartChef Recipe"
+    story.append(Paragraph("SmartChef AI Recipe", title_style))
+    story.append(Paragraph(f"<b>{display_name}</b>", heading_style))
+    story.append(Spacer(1, 6))
+
+    for raw_line in str(recipe_text).splitlines():
+        line = _clean_text(raw_line)
         if not line:
-            pdf.ln(4)
+            story.append(Spacer(1, 4))
             continue
-            
-        # Section Headers (Cooking Time:, Ingredients Required:, etc.)
-        if line.endswith(':'):
-            pdf.set_font('helvetica', 'B', 14)
-            pdf.set_text_color(50, 50, 50)
-            pdf.cell(0, 10, line, ln=1)
-        elif line.startswith('•') or line.startswith('-') or line.startswith('*'):
-            pdf.set_font('helvetica', '', 11)
-            pdf.set_text_color(0, 0, 0)
-            
-            # Clean non-latin1 chars from remaining line content
-            content = line[1:].strip()
-            content = content.replace('\u2022', '-')
-            content = content.replace('\u2013', '-')
-            content = content.replace('\u2014', '-')
-            content = content.encode('latin-1', 'replace').decode('latin-1')
-            
-            pdf.multi_cell(0, 7, f"- {content}")
-        # Numbered lists (1. 2. 3.)
-        elif re.match(r'^\d+\.', line):
-            pdf.set_font('helvetica', '', 11)
-            pdf.set_text_color(0, 0, 0)
-            
-            # Clean non-latin1 chars
-            content = line
-            content = content.replace('\u2022', '-')
-            content = content.replace('\u2013', '-')
-            content = content.replace('\u2014', '-')
-            content = content.encode('latin-1', 'replace').decode('latin-1')
-            
-            pdf.multi_cell(0, 7, content)
-        # Normal Text
-        else:
-            pdf.set_font('helvetica', '', 11)
-            pdf.set_text_color(0, 0, 0)
-            
-            # Clean non-latin1 chars
-            content = line
-            content = content.replace('\u2022', '-')
-            content = content.replace('\u2013', '-')
-            content = content.replace('\u2014', '-')
-            content = content.encode('latin-1', 'replace').decode('latin-1')
-            
-            pdf.multi_cell(0, 7, content)
-            
-    # Output to a BytesIO buffer instead of a file
-    pdf_buffer = io.BytesIO()
-    pdf_bytes = pdf.output(dest='S')
-    if isinstance(pdf_bytes, str):
-        pdf_bytes = pdf_bytes.encode('latin-1')
-    pdf_buffer.write(pdf_bytes)
-    pdf_buffer.seek(0)
-    
-    return pdf_buffer
+
+        if line.endswith(":"):
+            story.append(Paragraph(line, heading_style))
+            continue
+
+        if line.startswith(("-", "*")):
+            line = f"&#8226; {_clean_text(line[1:])}"
+            story.append(Paragraph(line, body_style))
+            continue
+
+        if re.match(r"^\d+\.", line):
+            story.append(Paragraph(line, body_style))
+            continue
+
+        story.append(Paragraph(line, body_style))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer

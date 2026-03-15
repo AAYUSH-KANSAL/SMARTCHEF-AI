@@ -15,7 +15,7 @@
 - **LangChain**: Orchestrates the LLM prompts and extraction logic using LangChain Expression Language (LCEL).
 - **Groq API / OpenAI Compatible**: Utilizes blazingly fast inference to generate results instantly using models like `gpt-oss-20b` or `Llama3` variations.
 - **Python-dotenv**: Securely handles environment configurations.
-- **FPDF2**: Parses model markdown outputs into gorgeous PDF files.
+- **ReportLab**: Renders model markdown outputs into reliable PDF exports.
 
 ## Installation and Setup
 
@@ -60,7 +60,7 @@ SMARTCHEF-AI/
 │
 └── utils/
     ├── groq_client.py         # Initialization of LLM connection
-    └── pdf_generator.py       # FPDF2 engine for rendering PDF exports
+    └── pdf_generator.py       # ReportLab engine for rendering PDF exports
 ```
 
 Enjoy your culinary journey with **SmartChef AI**!
