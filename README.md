@@ -30,7 +30,6 @@
    ```bash
    pip install -r requirements.txt
    ```
-   *(Ensure you also run `pip install markdown pdfkit fpdf2` if they are not in the requirements file yet)*
 
 3. **Environment Setup:**
    Create a `.env` file in the root directory and add your API Key:
