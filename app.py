@@ -69,7 +69,7 @@ def load_css():
     }
     
     /* Inputs */
-    .stTextInput>div>div>input, .stTextArea>div>div>textarea, .stSelectbox>div>div>div, .stNumberInput>div>div>input {
+    .stTextInput>div>div>input, .stTextArea>div>div>textarea, .stNumberInput>div>div>input {
         background: rgba(15, 23, 42, 0.6) !important;
         border: 1px solid rgba(148, 163, 184, 0.2) !important;
         color: #f8fafc !important;
@@ -77,6 +77,18 @@ def load_css():
         padding: 0.75rem 1rem !important;
         transition: all 0.3s ease;
         font-size: 1rem;
+    }
+    
+    .stSelectbox>div>div>div {
+        background: rgba(15, 23, 42, 0.6) !important;
+        border: 1px solid rgba(148, 163, 184, 0.2) !important;
+        color: #f8fafc !important;
+        border-radius: 12px !important;
+        transition: all 0.3s ease;
+    }
+    
+    .stSelectbox>div>div>div>div {
+        color: #f8fafc !important; 
     }
     
     .stTextInput>div>div>input:focus, .stTextArea>div>div>textarea:focus {
